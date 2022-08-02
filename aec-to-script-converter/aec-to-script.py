@@ -5,6 +5,7 @@
 # Description: .aec to crazyswarm flight script converter
 
 import math
+import subprocess
 import sys
 from pprint import pprint
 
@@ -84,16 +85,20 @@ def convert_coord(coord):
     # TODO: Convert coordinate to crazyflie coordinate system
     temp = 0
 
+    temp = coord[2]
+    coord[2] = coord[1]
+    coord[1] = temp
+
     # Set scale
     for i in range(len(coord)):
-        coord[i] *= 0.01
+        coord[i] *= 0.025
     return coord
 
 
 def get_yaw(keys):
-    # Use X_rotate value
+    # Use Y_rotate value
     # Convert from degree to radian
-    return math.radians(float(keys[5]))
+    return math.radians(float(keys[6]))
 
 
 def get_color(keys):
@@ -111,21 +116,32 @@ def build_yaml(start_positions, channel_num):
         output_file.write("    type: default\n")
 
 
-def build_script(positions, colors, frame_time):
+def build_script(channel, positions, colors, frame_rate):
+    # TODO: Make user interface, handle SIGNAL event, process rebooting of drones
+
     output_file = open("flight_script.py", 'w')
     output_file.write("from pycrazyswarm import *\n"
-                      "import numpy as np\n\n"
-                      "swarm = Crazyswarm()\n"
+                      "import numpy as np\n"
+                      "import subprocess\n\n")
+
+    # Rebooting drone: not verified
+    # output_file.write("for i in range({}):\n".format(len(positions[0])) +
+    #                   "    uri = \"radio://0/{}/2M/E7E7E7E7{}\".format(i)\n".format(channel, "{0:02X}") +
+    #                   "    subprocess.call([\"rosrun crazyflie_tools reboot --uri \" + uri], shell=True)\n\n")
+
+    # Initialize crazyswarm_server
+    output_file.write("swarm = Crazyswarm()\n"
                       "timeHelper = swarm.timeHelper\n"
                       "allcfs = swarm.allcfs\n"
                       "\n")
 
     for i in range(len(positions)):
         for j in range(len(positions[i])):
-            output_file.write("pos = np.array(allcfs.crazyflies[" + str(j) + "].initialPosition) + np.array(" + str(positions[i][j][0]) + ")\n")
+            output_file.write("pos = np.array(allcfs.crazyflies[" + str(j) + "].initialPosition) + np.array(" + str(
+                positions[i][j][0]) + ")\n")
             output_file.write("allcfs.crazyflies[" + str(j) + "].cmdPosition(pos, " + str(positions[i][j][1]) + ")\n")
-            output_file.write("allcfs.crazyflies[" + str(j) + "].setLEDColor(" + str(led_list[i][j])[1:-1] + ")\n")
-        output_file.write("timeHelper.sleep(" + str(frame_time) + ")\n")
+            output_file.write("allcfs.crazyflies[" + str(j) + "].setLEDColor(" + str(colors[i][j])[1:-1] + ")\n")
+        output_file.write("timeHelper.sleepForRate(" + str(frame_rate) + ")\n")
 
     output_file.write("\n"
                       "for cf in allcfs.crazyflies:\n"
@@ -134,12 +150,12 @@ def build_script(positions, colors, frame_time):
 
 if __name__ == '__main__':
     channel = 80
-    frametime = 0.1
+    framerate = 10
     file = open(sys.argv[1], 'r')
     pos_list, led_list = read_file(file)
     start_pos = pos_list[0]
     build_yaml(start_pos, channel)
-    build_script(pos_list, led_list, frametime)
+    build_script(channel, pos_list, led_list, framerate)
 
     # Print for debuging
     # pprint(pos_list)
