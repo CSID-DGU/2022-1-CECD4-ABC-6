@@ -39,6 +39,7 @@ def read_file(input_file):
             break
     input_file.seek(0)
 
+
     # Build positions list for each drone
     positions = []
     colors = []
@@ -82,7 +83,6 @@ def get_pos(keys):
 
 def convert_coord(coord):
     # Convert coordinates to crazyflie coordinate system
-    # TODO: Convert coordinate to crazyflie coordinate system
     temp = 0
 
     temp = coord[2]
@@ -91,7 +91,7 @@ def convert_coord(coord):
 
     # Set scale
     for i in range(len(coord)):
-        coord[i] *= 0.025
+        coord[i] *= 0.01
     return coord
 
 
@@ -137,11 +137,13 @@ def build_script(channel, positions, colors, frame_rate):
 
     for i in range(len(positions)):
         for j in range(len(positions[i])):
-            output_file.write("pos = np.array(allcfs.crazyflies[" + str(j) + "].initialPosition) + np.array(" + str(
+            # np.array(allcfs.crazyflies[" + str(j) + "].initialPosition) +
+            output_file.write("pos = np.array(" + str(
                 positions[i][j][0]) + ")\n")
             output_file.write("allcfs.crazyflies[" + str(j) + "].cmdPosition(pos, " + str(positions[i][j][1]) + ")\n")
-            output_file.write("allcfs.crazyflies[" + str(j) + "].setLEDColor(" + str(colors[i][j])[1:-1] + ")\n")
+            # output_file.write("allcfs.crazyflies[" + str(j) + "].setLEDColor(" + str(colors[i][j])[1:-1] + ")\n")
         output_file.write("timeHelper.sleepForRate(" + str(frame_rate) + ")\n")
+        # output_file.write("timeHelper.sleep(" + str(1 / frame_rate) + ")\n")
 
     output_file.write("\n"
                       "for cf in allcfs.crazyflies:\n"
@@ -150,7 +152,7 @@ def build_script(channel, positions, colors, frame_rate):
 
 if __name__ == '__main__':
     channel = 80
-    framerate = 10
+    framerate = 30
     file = open(sys.argv[1], 'r')
     pos_list, led_list = read_file(file)
     start_pos = pos_list[0]
