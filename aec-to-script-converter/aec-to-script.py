@@ -39,7 +39,6 @@ def read_file(input_file):
             break
     input_file.seek(0)
 
-
     # Build positions list for each drone
     positions = []
     colors = []
@@ -83,8 +82,6 @@ def get_pos(keys):
 
 def convert_coord(coord):
     # Convert coordinates to crazyflie coordinate system
-    temp = 0
-
     temp = coord[2]
     coord[2] = coord[1]
     coord[1] = temp
@@ -116,13 +113,14 @@ def build_yaml(start_positions, channel_num):
         output_file.write("    type: default\n")
 
 
-def build_script(channel, positions, colors, frame_rate):
+def build_script(positions, colors, frame_rate):
     # TODO: Make user interface, handle SIGNAL event, process rebooting of drones
 
     output_file = open("flight_script.py", 'w')
     output_file.write("from pycrazyswarm import *\n"
                       "import numpy as np\n"
-                      "import subprocess\n\n")
+                      "import subprocess\n"
+                      "import signal\n\n")
 
     # Rebooting drone: not verified
     # output_file.write("for i in range({}):\n".format(len(positions[0])) +
@@ -130,23 +128,34 @@ def build_script(channel, positions, colors, frame_rate):
     #                   "    subprocess.call([\"rosrun crazyflie_tools reboot --uri \" + uri], shell=True)\n\n")
 
     # Initialize crazyswarm_server
+    output_file.write("print(\"initializing...\")\n")
     output_file.write("swarm = Crazyswarm()\n"
                       "timeHelper = swarm.timeHelper\n"
                       "allcfs = swarm.allcfs\n"
                       "\n")
 
-    for i in range(len(positions)):
-        for j in range(len(positions[i])):
-            # np.array(allcfs.crazyflies[" + str(j) + "].initialPosition) +
-            output_file.write("pos = np.array(" + str(
-                positions[i][j][0]) + ")\n")
-            output_file.write("allcfs.crazyflies[" + str(j) + "].cmdPosition(pos, " + str(positions[i][j][1]) + ")\n")
-            # output_file.write("allcfs.crazyflies[" + str(j) + "].setLEDColor(" + str(colors[i][j])[1:-1] + ")\n")
-        output_file.write("timeHelper.sleepForRate(" + str(frame_rate) + ")\n")
-        # output_file.write("timeHelper.sleep(" + str(1 / frame_rate) + ")\n")
+    # SIGNAL event handling
+    output_file.write("\ndef handler(signum, frame):\n"
+                      "    print(\"\\nemergency stop!\")\n"
+                      "    for cfs in allcfs.crazyflies:\n"
+                      "        cfs.cmdStop()\n\n")
 
-    output_file.write("\n"
-                      "for cf in allcfs.crazyflies:\n"
+    output_file.write("\nsignal.signal(signal.SIGINT, handler)\n\n")
+    output_file.write("print(\"press enter to start: \")\n")
+    output_file.write("input()\n\n")
+
+    for i in range(len(positions)):
+        output_file.write("# keyframe " + str(i) + "\n")
+        for j in range(len(positions[i])):
+            output_file.write("pos = np.array(allcfs.crazyflies[" + str(j) + "].initialPosition)\n")
+            output_file.write(
+                "pos += np.array(" + str(positions[i][j][0]) + ") - np.array(" + str(positions[0][j][0]) + ")\n")
+            output_file.write("allcfs.crazyflies[" + str(j) + "].cmdPosition(pos, " + str(positions[i][j][1]) + ")\n")
+            # Temporarily removed because setLEDColor caused excessive execution delay
+            # output_file.write("allcfs.crazyflies[" + str(j) + "].setLEDColor(" + str(colors[i][j])[1:-1] + ")\n")
+        output_file.write("timeHelper.sleepForRate(" + str(frame_rate) + ")\n\n")
+
+    output_file.write("for cf in allcfs.crazyflies:\n"
                       "    cf.cmdStop()\n")
 
 
@@ -157,7 +166,7 @@ if __name__ == '__main__':
     pos_list, led_list = read_file(file)
     start_pos = pos_list[0]
     build_yaml(start_pos, channel)
-    build_script(channel, pos_list, led_list, framerate)
+    build_script(pos_list, led_list, framerate)
 
     # Print for debuging
     # pprint(pos_list)
