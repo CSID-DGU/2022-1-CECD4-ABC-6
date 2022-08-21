@@ -1,7 +1,7 @@
 # Name: aec-to-script.py
-# Revision: 0.2
+# Revision: 0.3
 # Author: Taewon Kang
-# Date: 2022-08-13
+# Date: 2022-08-22
 # Description: .aec to crazyswarm flight script converter
 
 import math
@@ -138,7 +138,8 @@ def build_script(positions, colors, frame_rate):
     output_file.write("\ndef handler(signum, frame):\n"
                       "    print(\"\\nemergency stop!\")\n"
                       "    for cfs in allcfs.crazyflies:\n"
-                      "        cfs.cmdStop()\n\n")
+                      "        cfs.cmdStop()\n"
+                      "    exit(-1)\n")
 
     output_file.write("\nsignal.signal(signal.SIGINT, handler)\n\n")
     output_file.write("print(\"press enter to start: \")\n")

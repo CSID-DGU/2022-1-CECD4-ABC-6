@@ -13,7 +13,7 @@ def handler(signum, frame):
     print("\nemergency stop!")
     for cfs in allcfs.crazyflies:
         cfs.cmdStop()
-
+    exit(-1)
 
 signal.signal(signal.SIGINT, handler)
 
