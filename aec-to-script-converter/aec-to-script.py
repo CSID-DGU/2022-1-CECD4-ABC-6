@@ -80,7 +80,7 @@ def get_pos(keys):
     return convert_coord(list(map(float, keys[2:5])))
 
 
-def convert_coord(coord, scale):
+def convert_coord(coord):
     # Convert coordinates to crazyflie coordinate system
     temp = coord[2]
     coord[2] = coord[1]
@@ -88,7 +88,7 @@ def convert_coord(coord, scale):
 
     # Set scale
     for i in range(len(coord)):
-        coord[i] *= 0.01
+        coord[i] *= scale
     return coord
 
 
@@ -103,17 +103,17 @@ def get_color(keys):
     return float(keys[11]), float(keys[12]), float(keys[13])
 
 
-def build_yaml(start_positions, channel_num):
+def build_yaml():
     output_file = open("crazyflies.yaml", 'w')
     output_file.write("crazyflies:\n")
-    for i in range(len(start_positions)):
+    for i in range(len(start_pos)):
         output_file.write("  - id: " + str(i + 1) + "\n")
-        output_file.write("    channel: " + str(channel_num) + "\n")
-        output_file.write("    initialPosition: " + str(start_positions[i][0]) + "\n")
+        output_file.write("    channel: " + str(channel) + "\n")
+        output_file.write("    initialPosition: " + str(start_pos[i][0]) + "\n")
         output_file.write("    type: default\n")
 
 
-def build_script(positions, colors, frame_rate, led_rate):
+def build_script():
     # TODO: Make user interface, process rebooting of drones
 
     output_file = open("flight_script.py", 'w')
@@ -145,19 +145,19 @@ def build_script(positions, colors, frame_rate, led_rate):
     output_file.write("print(\"press enter to start: \")\n")
     output_file.write("input()\n\n")
 
-    for i in range(len(positions)):
+    for i in range(len(pos_list)):
         output_file.write("# keyframe " + str(i) + "\n")
-        for j in range(len(positions[i])):
+        for j in range(len(pos_list[i])):
             output_file.write("pos = np.array(allcfs.crazyflies[" + str(j) + "].initialPosition)\n")
             output_file.write(
-                "pos += np.array(" + str(positions[i][j][0]) + ") - np.array(" + str(positions[0][j][0]) + ")\n")
-            output_file.write("allcfs.crazyflies[" + str(j) + "].cmdPosition(pos, " + str(positions[i][j][1]) + ")\n")
+                "pos += np.array(" + str(pos_list[i][j][0]) + ") - np.array(" + str(pos_list[0][j][0]) + ")\n")
+            output_file.write("allcfs.crazyflies[" + str(j) + "].cmdPosition(pos, " + str(pos_list[i][j][1]) + ")\n")
 
             # set LED color every 1 sec cycle
-            if i % (frame_rate / led_rate) == 0:
-                output_file.write("allcfs.crazyflies[" + str(j) + "].setLEDColor(" + str(colors[i][j])[1:-1] + ")\n")
+            if i % (framerate / ledrate) == 0:
+                output_file.write("allcfs.crazyflies[" + str(j) + "].setLEDColor(" + str(led_list[i][j])[1:-1] + ")\n")
 
-        output_file.write("timeHelper.sleepForRate(" + str(frame_rate) + ")\n\n")
+        output_file.write("timeHelper.sleepForRate(" + str(framerate) + ")\n\n")
 
     output_file.write("for cf in allcfs.crazyflies:\n"
                       "    cf.cmdStop()\n")
@@ -167,12 +167,12 @@ if __name__ == '__main__':
     channel = 80
     framerate = 30
     ledrate = 1
-    scale =
+    scale = 0.01
     file = open(sys.argv[1], 'r')
     pos_list, led_list = read_file(file)
     start_pos = pos_list[0]
-    build_yaml(start_pos, channel)
-    build_script(pos_list, led_list, framerate, ledrate)
+    build_yaml()
+    build_script()
 
     # Print for debuging
     # pprint(pos_list)
