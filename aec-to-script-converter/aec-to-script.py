@@ -1,7 +1,7 @@
 # Name: aec-to-script.py
-# Revision: 0.4
+# Revision: 0.5
 # Author: Taewon Kang
-# Date: 2022-08-23
+# Date: 2022-09-02
 # Description: .aec to crazyswarm flight script converter
 
 import math
