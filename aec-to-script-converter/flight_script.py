@@ -1,7 +1,19 @@
 from pycrazyswarm import *
+from cflib.drivers.crazyradio import Crazyradio
 import numpy as np
 import subprocess
+import sys
 import signal
+
+if len(sys.argv) < 1:
+    print("rebooting drones...")
+    cr = Crazyradio()
+    for i in range(len(allcfs.crazyflies)):
+        cr.set_channel(80)
+        cr.set_data_rate(cr.DR_2MPS)
+        cr.set_address(((0xE7,) * 4) + (i + 1,))
+        print(cr.send_packet((0xff, 0xfe, 0xff)).ack)
+        print(cr.send_packet((0xff, 0xfe, 0xf0, 1)).ack)
 
 print("initializing...")
 swarm = Crazyswarm()

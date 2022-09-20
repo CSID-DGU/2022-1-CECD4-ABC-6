@@ -107,9 +107,9 @@ def build_yaml():
     output_file = open("crazyflies.yaml", 'w')
     output_file.write("crazyflies:\n")
     for i in range(len(start_pos)):
-        output_file.write("  - id: " + str(i + 1) + "\n")
-        output_file.write("    channel: " + str(channel) + "\n")
-        output_file.write("    initialPosition: " + str(start_pos[i][0]) + "\n")
+        output_file.write("  - id: {}\n".format(str(i + 1)))
+        output_file.write("    channel: {}\n".format(str(channel)))
+        output_file.write("    initialPosition: {}\n".format(str(start_pos[i][0])))
         output_file.write("    type: default\n")
 
 
@@ -118,14 +118,22 @@ def build_script():
 
     output_file = open("flight_script.py", 'w')
     output_file.write("from pycrazyswarm import *\n"
+                      "from cflib.drivers.crazyradio import Crazyradio\n"
                       "import numpy as np\n"
                       "import subprocess\n"
+                      "import sys\n"
                       "import signal\n\n")
 
-    # Rebooting drone: not verified
-    # output_file.write("for i in range({}):\n".format(len(positions[0])) +
-    #                   "    uri = \"radio://0/{}/2M/E7E7E7E7{}\".format(i)\n".format(channel, "{0:02X}") +
-    #                   "    subprocess.call([\"rosrun crazyflie_tools reboot --uri \" + uri], shell=True)\n\n")
+    # Rebooting drones: not verified
+    output_file.write("if len(sys.argv) < 1:\n"
+                      "    print(\"rebooting drones...\")\n")
+    output_file.write("    cr = Crazyradio()\n"
+                      "    for i in range(len(allcfs.crazyflies)):\n"
+                      "        cr.set_channel({})\n".format(channel) +
+                      "        cr.set_data_rate(cr.DR_2MPS)\n"
+                      "        cr.set_address(((0xE7,) * 4) + (i + 1,))\n"
+                      "        print(cr.send_packet((0xff, 0xfe, 0xff)).ack)\n" +  # Init the reboot
+                      "        print(cr.send_packet((0xff, 0xfe, 0xf0, 1)).ack)\n\n")  # Reboot to Firmware
 
     # Initialize crazyswarm_server
     output_file.write("print(\"initializing...\")\n")
@@ -146,18 +154,18 @@ def build_script():
     output_file.write("input()\n\n")
 
     for i in range(len(pos_list)):
-        output_file.write("# keyframe " + str(i) + "\n")
+        output_file.write("# keyframe {}\n".format(str(i)))
         for j in range(len(pos_list[i])):
-            output_file.write("pos = np.array(allcfs.crazyflies[" + str(j) + "].initialPosition)\n")
+            output_file.write("pos = np.array(allcfs.crazyflies[{}].initialPosition)\n".format(str(j)))
             output_file.write(
-                "pos += np.array(" + str(pos_list[i][j][0]) + ") - np.array(" + str(pos_list[0][j][0]) + ")\n")
-            output_file.write("allcfs.crazyflies[" + str(j) + "].cmdPosition(pos, " + str(pos_list[i][j][1]) + ")\n")
+                "pos += np.array({}) - np.array({})\n".format(str(pos_list[i][j][0]), str(pos_list[0][j][0])))
+            output_file.write("allcfs.crazyflies[{}].cmdPosition(pos, {})\n".format(str(j), str(pos_list[i][j][1])))
 
             # set LED color every 1 sec cycle
             if i % (framerate / ledrate) == 0:
-                output_file.write("allcfs.crazyflies[" + str(j) + "].setLEDColor(" + str(led_list[i][j])[1:-1] + ")\n")
+                output_file.write("allcfs.crazyflies[{}].setLEDColor({})\n".format(str(j), str(led_list[i][j])[1:-1]))
 
-        output_file.write("timeHelper.sleepForRate(" + str(framerate) + ")\n\n")
+        output_file.write("timeHelper.sleepForRate({})\n\n".format(str(framerate)))
 
     output_file.write("for cf in allcfs.crazyflies:\n"
                       "    cf.cmdStop()\n")
